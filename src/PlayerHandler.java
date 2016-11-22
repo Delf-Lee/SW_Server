@@ -14,11 +14,13 @@ public class PlayerHandler extends Thread {
 
 	@Override
 	public void run() {
-		try {
-			readMeg();
-		} catch (IOException e) {
-			System.out.println("error occured in read message");
-			e.printStackTrace();
+		while (true) {
+			try {
+				readMeg();
+			} catch (IOException e) {
+				System.out.println("error occured in read message");
+				e.printStackTrace();
+			}
 		}
 	}
 
@@ -27,6 +29,7 @@ public class PlayerHandler extends Thread {
 		this.id = id;
 		// this.nickname = nickname;
 		setHandler();
+		start();
 	}
 
 	public void setPlayers(PlayerHandler[] players) {
@@ -49,6 +52,7 @@ public class PlayerHandler extends Thread {
 		byte[] buffer = new byte[128];
 		String msg;
 		String splitMsg[];
+		System.out.println("수신 대기");
 		dis.read(buffer); // 대기
 		msg = new String(buffer);
 		System.out.println("p" + id + " 받은 메세지: " + msg);
@@ -62,13 +66,13 @@ public class PlayerHandler extends Thread {
 	private void broadcastingMsg(String str) {
 		for (int i = 0; i < players.length; i++) {
 			try {
-	            byte[] bb;
-	            bb = str.getBytes();
-	            dos.write(bb);
-	        } catch (IOException e) {
-	        	System.out.println("error: send mesage");
-	        	e.printStackTrace();
-	        }
+				byte[] bb;
+				bb = str.getBytes();
+				dos.write(bb);
+			} catch (IOException e) {
+				System.out.println("error: send mesage");
+				e.printStackTrace();
+			}
 		}
 	}
 

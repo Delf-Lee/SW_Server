@@ -25,6 +25,7 @@ public class Server extends Thread {
 			} catch (IOException e) {
 				e.printStackTrace();
 				System.out.println("accept error");
+				// 여기서 비정상 종료시 클라이언트
 			}
 		}
 	}
