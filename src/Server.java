@@ -30,26 +30,34 @@ public class Server extends Thread {
 		}
 	}
 
-	/** 서버에 플레이어 추가.	
+	/** 서버에 플레이어 추가.
 	 * @param socket 플레이어의 소켓 번호 */
-	private boolean addPlayer(Socket socket) {
-		if(playersInServer < MAX_PLAYER) {
-			player[playersInServer] = new PlayerHandler(socket, playersInServer);
+	private boolean addPlayer(Socket socket) throws IOException {
+		if (playersInServer < MAX_PLAYER) { // 최대 인원보다 많다면 추가하지 않음
+			player[playersInServer] = new PlayerHandler(socket, playersInServer, player);
+			playersInServer++;
+			for (int i = 0; i < playersInServer; i++) {
+				player[i].setPlayers(player);
+			}
 			return true;
 		}
+		socket.close(); // 응 안받아
 		return false;
 	}
 
+	/** 생성자 */
 	public Server() {
 		try {
-			serverSocket = new ServerSocket(port);
+			serverSocket = new ServerSocket(port); // 서버소켓
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();	
+			System.out.println("[SERVER] 서버 소켓 생성 실패");
+			e.printStackTrace();
 		} // 서버가 포트 여는부분
 		serverStart(30023);
 	}
 
+	/** 서버 스레드를 시작한다.
+	 * @param port 서버를 실행할 포트번호 */
 	public void serverStart(int port) {
 		this.port = port;
 		try {
