@@ -2,7 +2,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
-
+/** @author delf */
 public class PlayerHandler extends Thread {
 	private Socket socket;
 	private int id;

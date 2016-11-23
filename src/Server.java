@@ -1,7 +1,7 @@
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-
+/** @author delf */
 public class Server extends Thread {
 
 	public final static int P1 = 0;

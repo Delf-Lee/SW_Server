@@ -1,4 +1,4 @@
-
+/** @author delf @author delf*/
 public class G {
 	
 	public final static int P1 = 0;
