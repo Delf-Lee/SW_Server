@@ -61,12 +61,6 @@ public class PlayerHandler extends Thread {
 	 * @param player 플레이어 핸들러의 배열 */
 	public void setPlayers(PlayerHandler[] players) {
 		this.players = players; // delf: 다른 클라이언트에게 broadcasting하기 위한 플레이어 array
-		if(players[id] == null) {
-			System.out.println("플레이어널ㅔ");
-		} else {
-			System.out.println("널아님");
-			System.out.println(test);
-		}
 	}
 
 	/** 스트림 생성 */
@@ -87,10 +81,9 @@ public class PlayerHandler extends Thread {
 	private String readMeg() throws IOException {
 		byte[] buffer = new byte[128];
 		String msg;
-		String splitMsg[];
+		// String splitMsg[];
 		dis.read(buffer); // 대기
 		msg = new String(buffer);
-		System.out.println("p" + id + " 받은 메세지: " + msg);
 		broadcastingMsg(msg); // delf: 임시
 		return msg;
 	}
@@ -100,8 +93,8 @@ public class PlayerHandler extends Thread {
 	private void broadcastingMsg(String str) {
 		for (int i = 0; i < Server.playersInServer; i++) {
 			players[i].sendMsg(str);
-			System.out.println(i + "에게 [" + str + "]보냄");
 		}
+		System.out.println("[" + str   .trim() + "]보냄");
 	}
 
 	/** 해당 클라이언트에게만 메시지 전송
