@@ -1,9 +1,6 @@
 import java.io.IOException;
 import java.net.DatagramPacket;
-import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.net.SocketAddress;
-import java.net.SocketException;
 
 /** @author delf */
 public class PlayerHandler extends Thread {
@@ -48,22 +45,6 @@ public class PlayerHandler extends Thread {
 	 * @author delf */
 	@Override
 	public void run() {
-//		while (true) {
-//			try {
-//				socket.receive(udp_packet); // delf :메시지 수신
-//				broadcastingMsg(udp_packet); // delf: 자신을 포함한 접속 된 클라이언트에게 broadcasting
-//			} catch (IOException e) {
-//				// TODO: 예외발생...? UDP에서는 언제 예외 던지지? // 교수님께 질문
-//				try {
-//					exitPlayer();
-//					return;
-//				} catch (IOException e1) {
-//					e1.printStackTrace();
-//				}
-//				System.out.println("error occured in read message");
-//				// e.printStackTrace();
-//			}
-//		}
 	}
 
 	/** 서버가 관리하는 클라이언트의 배열에서 종료된 클라이언트를 삭제한다. */

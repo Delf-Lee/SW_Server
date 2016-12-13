@@ -3,6 +3,9 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.util.Calendar;
+
+import javax.swing.text.html.HTMLDocument.HTMLReader.SpecialAction;
 
 /** @author delf */
 public class Server extends Thread {
@@ -11,6 +14,8 @@ public class Server extends Thread {
 	public final static int P2 = 1;
 	public final static int MAX_PLAYER = 2;
 	public static int playersInServer = 0; // 서버 내 클라이언트 수
+
+	public static int TEST_CNT = 2000;
 
 	private final static int BUFSIZE = 128;
 	public final static int CMD = 0;
@@ -24,9 +29,13 @@ public class Server extends Thread {
 	private DatagramSocket sndSocket;
 	private DatagramSocket rcvSocket;
 	// private DatagramPacket packet;
-
 	private PlayerHandler[] player = new PlayerHandler[MAX_PLAYER];
- /** 생성자 */
+	private boolean ready[] = { false, false };
+	private int testCnt[] = { 0, 0 };
+	private long testTotalSec[] = { 0, 0 };
+	private boolean calcFlag = false;
+
+	/** 생성자 */
 	public Server() {
 		// setSocketPort(13131);
 		try {
@@ -54,6 +63,12 @@ public class Server extends Thread {
 				rcvSocket.receive(rcvPacket); // 데이터 수신 부
 				handlingMsg(rcvPacket); // 받은 메시지 처리
 				initByte(bb);
+
+				if (calcFlag == true) {
+					System.out.println("[0] 평균 전송 시간: " + term[0] / (long) 2);
+					System.out.println("[1] 평균 전송 시간: " + term[1] / (long) 2);
+					calcFlag = false;
+				}
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -77,11 +92,17 @@ public class Server extends Thread {
 		return false;
 	}
 
+	private void broadcasting(byte[] sb) {
+		broadcasting(sb, "");
+	}
+
 	/** 플레이어들에게 packet 전송
 	 * @param sb sendByte - 전송할 바이트 */
-	private void broadcasting(byte[] sb) {
+	private void broadcasting(byte[] sb, String tail) {
 		try {
-			String test = new String(sb);
+			System.out.println("tail = " + tail);
+			String test = (new String(sb)).trim() + " " + tail;
+			sb = test.getBytes();
 			System.out.print("player[");
 			for (int i = 0; i < Server.playersInServer; i++) {
 				// 패킷 생성
@@ -101,34 +122,77 @@ public class Server extends Thread {
 	private void handlingMsg(DatagramPacket packet) throws IOException { // TODO: 나중에 프로토콜 더생기면 안에 try/catch 생성
 		String msg = new String(bb).trim();
 		String splitMsg[];
+		int id;
 		splitMsg = msg.split(G.BLANK);
-
-		System.out.println("handlingMsg = " + msg);
+		try {
+			id = Integer.parseInt(splitMsg[ID]);
+		} catch (ArrayIndexOutOfBoundsException e) {
+			id = 0; // 올일 없음
+		}
+		if (!splitMsg[CMD].equals("/Test")) {
+			System.out.println("receive msg from client = " + msg);
+		}
 
 		switch (splitMsg[CMD]) {
 
 		case G.ACCESS:
 			int idNow = playersInServer;
-			addPlayer(packet.getAddress(),packet.getPort());
+			addPlayer(packet.getAddress(), packet.getPort());
 			System.out.println("플레이어 추가. ip = " + packet.getAddress());
 			String reply = createMsg(G.ACCESS, idNow + "");
 			sendMsg(player[idNow], reply);
+
+			if (idNow == G.P2) { // 모두 접속하면
+				System.out.println("시간측정시작");
+				checkNetworkTime();
+			}
+
 			break;
 
 		case G.KEY:
-			// int target = Integer.parseInt(splitMsg[ID]); // delf: 메시지에 대한 타겟을 저장
-			broadcasting(packet.getData());
+			String rcvMsg = new String(bb);
+			int delay = getInterval(id);
+			broadcasting(packet.getData(), Integer.toString(delay));
+			break;
+
+		case G.READY:
+			System.out.println("ready id: " + id);
+			ready[id] = true;
+
+			if (ready[G.P1] == true && ready[G.P2] == true) {
+				System.out.println("둘다 준비됨");
+				byte[] bb = new byte[BUFSIZE];
+				bb = (G.READY + " 0").getBytes();
+				broadcasting(bb);
+			}
+			break;
+		case "/Test":
+			int target = Integer.parseInt(splitMsg[ID]); // 플레이어 id
+			long interval = Long.parseLong(splitMsg[2]); // 시간
+
+			// System.out.println("delay = " + (getNow() - interval));
+			testTotalSec[target] += (getNow() - interval);
+			// System.out.println("getNow() = " + getNow() + ", interval = " + interval);
+			term[target] = testTotalSec[target] / (++testCnt[target]);
+			System.out.println(testTotalSec[target] + "/" + testCnt[target] + "=" + term[target]);
+
+			if (Integer.parseInt(splitMsg[3]) >= TEST_CNT - 1) {
+				calcFlag = true; // 테스트 끝남
+			}
 			break;
 		}
 	}
 
-	// public void notifyId() {
-	// }
-
-	// private DatagramPacket createPacket(String msg) {
-	// bb = msg.getBytes();
-	// return (new DatagramPacket(bb, bb.length));
-	// }
+	public int getInterval(int id) {
+		System.out.println(term[G.P1] + "  " + term[G.P2]);
+		switch (id) {
+		case G.P1:
+			return (int) (term[G.P1] - term[G.P2]);
+		case G.P2:
+			return (int) (term[G.P2] - term[G.P1]);
+		}
+		return -1;
+	}
 
 	/** 입력 받은 파라미터들로 프로토콜 형식으로 만든다.
 	 * @param par 프로토콜을 만드는 요소 문자열
@@ -188,5 +252,52 @@ public class Server extends Thread {
 	public static void main(String[] args) {
 		new Server();
 	}
-	
+
+	private long depart[] = { 0, 0 };
+	private long term[] = { 0, 0 };
+
+	public void setCriterion(int id) {
+		depart[id] = System.currentTimeMillis();
+	}
+
+	public long getNow() {
+		return System.currentTimeMillis();
+	}
+
+	public long getTerm(int id) {
+		return term[id];
+	}
+
+	public void checkNetworkTime() {
+		String test[] = { "/Test 0", "/Test 1" };
+		new Thread(new Runnable() {
+			String sendMsg = "";
+
+			@Override
+			public void run() {
+				int cnt = 0;
+				while (true) {
+					for (int id = 0; id <= G.P2; id++) {
+						try {
+							sendMsg = test[id] + " " + getNow() + " " + cnt;
+							// System.out.println("sneMsg: " + sendMsg);
+							System.out.println(sendMsg);
+							byte tmp[] = new byte[128];
+							tmp = sendMsg.getBytes(); // 전송
+							// 패킷 생성
+							DatagramPacket sendPacket = new DatagramPacket(tmp, tmp.length, player[id].getIpAddr(), player[id].getPort());
+							rcvSocket.send(sendPacket); // 전송
+							sleep(10);
+							// sendMsg = "";
+						} catch (IOException e) {
+							e.printStackTrace();
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
+						cnt++;
+					}
+				}
+			}
+		}).start();
+	}
 }
