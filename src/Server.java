@@ -15,9 +15,8 @@ public class Server extends Thread {
 	public final static int MAX_PLAYER = 2;
 	public static int playersInServer = 0; // 서버 내 클라이언트 수
 
-	public static int TEST_CNT = 2000;
-
 	private final static int BUFSIZE = 128;
+
 	public final static int CMD = 0;
 	public final static int ID = 1;
 	public final static int PORT = 1;
@@ -30,28 +29,19 @@ public class Server extends Thread {
 	private DatagramSocket rcvSocket;
 	// private DatagramPacket packet;
 	private PlayerHandler[] player = new PlayerHandler[MAX_PLAYER];
-	private boolean ready[] = { false, false };
-	private int testCnt[] = { 0, 0 };
-	private long testTotalSec[] = { 0, 0 };
-	private boolean calcFlag = false;
+	private boolean ready[] = { false, false }; // 각 클라이언트의 준비 여부
+	private int testCnt[] = { 0, 0 }; // 송수신 시간 테스트 횟수 (평균 구하기 위함)
+	private long testTotalSec[] = { 0, 0 }; // 송수신 시간 합
 
 	/** 생성자 */
 	public Server() {
-		// setSocketPort(13131);
 		try {
-			// sndSocket = new DatagramSocket(SENDPORT); // 전송용 소켓
 			rcvSocket = new DatagramSocket(RECEIVEPORT); // 수신용 소켓
 		} catch (SocketException e) {
 			e.printStackTrace();
 		}
 		start(); // 수신스레드 시작
 		System.out.println("서버 수신스레드 시작 (port: " + RECEIVEPORT + ")");
-	}
-
-	/** 서버 스레드를 시작한다.
-	 * @param port 서버를 실행할 포트번호 */
-	public void serverStart(int port) {
-
 	}
 
 	@Override
@@ -63,12 +53,6 @@ public class Server extends Thread {
 				rcvSocket.receive(rcvPacket); // 데이터 수신 부
 				handlingMsg(rcvPacket); // 받은 메시지 처리
 				initByte(bb);
-
-				if (calcFlag == true) {
-					System.out.println("[0] 평균 전송 시간: " + term[0] / (long) 2);
-					System.out.println("[1] 평균 전송 시간: " + term[1] / (long) 2);
-					calcFlag = false;
-				}
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -83,9 +67,6 @@ public class Server extends Thread {
 			player[playersInServer] = new PlayerHandler(ipAddr, playersInServer, port);
 			playersInServer++;
 			System.out.println(" -> " + playersInServer);
-			// for (int i = 0; i < playersInServer; i++) {
-			// player[i].setPlayers(player);
-			// }
 			return true;
 		}
 		sndSocket.close(); // 응 안받아
@@ -101,8 +82,8 @@ public class Server extends Thread {
 	private void broadcasting(byte[] sb, String tail) {
 		try {
 			System.out.println("tail = " + tail);
-			String test = (new String(sb)).trim() + " " + tail;
-			sb = test.getBytes();
+			String test = (new String(sb)).trim() + " " + tail; // 문자열 정리, + 평균 송수신 시간 첨가
+			sb = test.getBytes(); // byte 추출
 			System.out.print("player[");
 			for (int i = 0; i < Server.playersInServer; i++) {
 				// 패킷 생성
@@ -119,7 +100,7 @@ public class Server extends Thread {
 	/** 클라이언트로 부터 받은 데이터를 처리함
 	 * @param packet 수신 받은 packet
 	 * @throws IOException */
-	private void handlingMsg(DatagramPacket packet) throws IOException { // TODO: 나중에 프로토콜 더생기면 안에 try/catch 생성
+	private void handlingMsg(DatagramPacket packet) throws IOException {
 		String msg = new String(bb).trim();
 		String splitMsg[];
 		int id;
@@ -176,9 +157,6 @@ public class Server extends Thread {
 			term[target] = testTotalSec[target] / (++testCnt[target]);
 			System.out.println(testTotalSec[target] + "/" + testCnt[target] + "=" + term[target]);
 
-			if (Integer.parseInt(splitMsg[3]) >= TEST_CNT - 1) {
-				calcFlag = true; // 테스트 끝남
-			}
 			break;
 		}
 	}
@@ -280,7 +258,6 @@ public class Server extends Thread {
 					for (int id = 0; id <= G.P2; id++) {
 						try {
 							sendMsg = test[id] + " " + getNow() + " " + cnt;
-							// System.out.println("sneMsg: " + sendMsg);
 							System.out.println(sendMsg);
 							byte tmp[] = new byte[128];
 							tmp = sendMsg.getBytes(); // 전송
