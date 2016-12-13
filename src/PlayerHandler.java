@@ -37,6 +37,12 @@ public class PlayerHandler extends Thread {
 		//start(); // delf: 서버 스레드 시작
 		// sendMsg(G.MYID + " " + id); // delf: 배정된 아이디 전송
 	}
+	
+	public PlayerHandler(InetAddress ipAddr, int id, int port) { // 소켓 안씀 this.port = port;
+		this.ipAddr = ipAddr;
+		this.id = id;
+		this.port = port;
+	}
 
 	/** {@link PlayerHandler}가 수행하는 핵심 로직
 	 * @author delf */
@@ -155,5 +161,13 @@ public class PlayerHandler extends Thread {
 
 	public InetAddress getIpAddr() {
 		return ipAddr;
+	}
+	
+	public int getPort() {
+		return port;
+	}
+	
+	public int getPlayerId() {
+		return id;
 	}
 }

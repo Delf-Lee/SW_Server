@@ -3,7 +3,6 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
-import java.time.format.ResolverStyle;
 
 /** @author delf */
 public class Server extends Thread {
@@ -16,6 +15,7 @@ public class Server extends Thread {
 	private final static int BUFSIZE = 128;
 	public final static int CMD = 0;
 	public final static int ID = 1;
+	public final static int PORT = 1;
 
 	public static int SENDPORT;
 	public static int RECEIVEPORT = 13131;
@@ -26,8 +26,7 @@ public class Server extends Thread {
 	// private DatagramPacket packet;
 
 	private PlayerHandler[] player = new PlayerHandler[MAX_PLAYER];
-
-	/** 생성자 */
+ /** 생성자 */
 	public Server() {
 		// setSocketPort(13131);
 		try {
@@ -54,6 +53,7 @@ public class Server extends Thread {
 			try {
 				rcvSocket.receive(rcvPacket); // 데이터 수신 부
 				handlingMsg(rcvPacket); // 받은 메시지 처리
+				initByte(bb);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -62,10 +62,10 @@ public class Server extends Thread {
 
 	/** 서버에 플레이어 추가.
 	 * @param sndSocket 플레이어의 소켓 번호 */
-	private boolean addPlayer(InetAddress ipAddr) throws IOException {
+	private boolean addPlayer(InetAddress ipAddr, int port) throws IOException {
 		if (playersInServer < MAX_PLAYER) { // 최대 인원보다 많다면 추가하지 않음
 			System.out.print("새로운 palyer가 추가됨, count = " + playersInServer);
-			player[playersInServer] = new PlayerHandler(ipAddr, playersInServer, player);
+			player[playersInServer] = new PlayerHandler(ipAddr, playersInServer, port);
 			playersInServer++;
 			System.out.println(" -> " + playersInServer);
 			// for (int i = 0; i < playersInServer; i++) {
@@ -85,7 +85,7 @@ public class Server extends Thread {
 			System.out.print("player[");
 			for (int i = 0; i < Server.playersInServer; i++) {
 				// 패킷 생성
-				DatagramPacket sendPacket = new DatagramPacket(sb, sb.length, player[i].getIpAddr(), SENDPORT);
+				DatagramPacket sendPacket = new DatagramPacket(sb, sb.length, player[i].getIpAddr(), player[i].getPort());
 				rcvSocket.send(sendPacket); // 전송
 				System.out.print(i + " ");
 			}
@@ -109,9 +109,10 @@ public class Server extends Thread {
 
 		case G.ACCESS:
 			int idNow = playersInServer;
-			addPlayer(packet.getAddress());
-			String reply = createMsg(G.ACCESS, " " + idNow);
-			sendMsg(idNow, reply);
+			addPlayer(packet.getAddress(),packet.getPort());
+			System.out.println("플레이어 추가. ip = " + packet.getAddress());
+			String reply = createMsg(G.ACCESS, idNow + "");
+			sendMsg(player[idNow], reply);
 			break;
 
 		case G.KEY:
@@ -157,18 +158,14 @@ public class Server extends Thread {
 	/** 클라이언트에게 메시지를 전송한다(문자열).
 	 * @param id 전송할 클라이언트의 id.
 	 * @param msg 전송할 메시지 문자열. */
-	private void sendMsg(int id, String msg) {
+	private void sendMsg(PlayerHandler player, String msg) {
 		// 디버깅, 로깅
-		System.out.println("TO[" + id + "]" + "send message(port: " + SENDPORT + "): " + msg);
-		if (player[id] == null) {
-			System.out.println("접속되어 있지 않은 id: " + id);
-			return;
-		}
+		System.out.println("TO[" + player.getPlayerId() + "]" + "send message(port: " + player.getPort() + "): " + msg);
 		// 전송
 		try {
 			byte[] msgByte = new byte[128];
 			msgByte = msg.getBytes();
-			DatagramPacket packet = new DatagramPacket(msgByte, msgByte.length, player[id].getIpAddr(), SENDPORT);
+			DatagramPacket packet = new DatagramPacket(msgByte, msgByte.length, player.getIpAddr(), player.getPort());
 			rcvSocket.send(packet); // 전송
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -182,7 +179,14 @@ public class Server extends Thread {
 		RECEIVEPORT = SENDPORT + 1;
 	}
 
+	private void initByte(byte[] b) {
+		for (int i = 0; i < b.length; i++) {
+			b[i] = 0;
+		}
+	}
+
 	public static void main(String[] args) {
 		new Server();
 	}
+	
 }
